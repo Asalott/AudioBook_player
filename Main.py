@@ -5,7 +5,7 @@ import vlc  # imports python-vlc
 import time # imports time
 
 # path to the book
-book_path = 'books/The Eminence in Shadow, Vol. 5 [B0GQD2Z6TV]/The Eminence in Shadow, Vol. 5 [B0GQD2Z6TV].m4b'
+book_path = 'Book_path_here'
 print("Loading the book...")
 
 # Designates the player
