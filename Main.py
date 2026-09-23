@@ -22,4 +22,4 @@ time.sleep(1) # adds a delay to allow the player to start to get a proper length
 get_length = player.get_length()
 print(f"Book length: {get_length} ms")
 
-time.sleep(get_length / 1000)  # plays the book for its entire length# This is the main python file
+time.sleep(get_length / 1000)  # plays the book for its entire length
