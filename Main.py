@@ -14,22 +14,22 @@ DB_PATH = "books.db"
 
 # handles the main logic of the program, including finding books, creating a database, loading books into the database, and playing the selected book
 library = BookLibrary()
-books = library.find_books("books")  # finds all .m4b files in the specified folder and its subfolders
+scan = library.find_books("books")  # finds all .m4b files in the specified folder and its subfolders
 
 library.create_database("DB_PATH")  # creates a SQLite database to store book information
 
-library.load_books_into_database("DB_PATH", books)  # loads book information into the SQLite database
-
-library.enumerate_books(DB_PATH)  # enumerates the books in the database and prints them with their index
+library.load_books_into_database("DB_PATH", scan)  # loads book information into the SQLite database
 
 input_book = int(input("Input the number of the book you want to play: "))  # input from the user to select the book they want to play
 
-player = BookPlayer(books[input_book])  # creates a BookPlayer object with the selected book
+player = BookPlayer(scan[input_book])  # creates a BookPlayer object with the selected book
+
+library.close_database()  # closes the database connection after loading the books into the database
 
 # input from the user to control the audio player hopefully it will be UI in the future
 input_play = input("Input play if you want to play the book: ").strip().lower()
 
-if input_book < len(books):  # checks if the input is valid and within the range of the books list
+if input_book < len(scan):  # checks if the input is valid and within the range of the books list
     # place holder vill be replaced with a UI in the future to control the audio player
     if input_play == "play":
 
@@ -48,5 +48,5 @@ if input_book < len(books):  # checks if the input is valid and within the range
 
         print("Exiting the program.")
 # will add proper error handling in the future to handle invalid input and other errors
-elif input_book >= len(books):
+elif input_book >= len(scan):
     print("Invalid book selection. Exiting the program.")
