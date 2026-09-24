@@ -66,3 +66,16 @@ class BookPlayer:
             return new_time
         self.player.set_time(new_time)
         print(f"Skipped backward {milliseconds} ms.")
+
+    def get_chapter(self):
+        """Returns the current chapter of the book based on the playback time."""
+        # Placeholder implementation; actual chapter detection would require additional metadata
+        current_time = self.get_time()
+        print(f"Current chapter based on time {current_time} ms.")
+        return "Chapter information not available."
+
+    def get_cover_art(self):
+        """Returns the cover art of the book if available."""
+        # Placeholder implementation; actual cover art retrieval would require additional metadata
+        print("Cover art retrieval not implemented.")
+        return None
