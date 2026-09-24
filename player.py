@@ -1,7 +1,7 @@
 # This is the player python file
 
 # Note: Remove the print statments after testing is done, they are only for debugging purposes
-
+from pathlib import Path
 # imports the vlc module to play audio files
 import vlc 
 
