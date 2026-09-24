@@ -48,3 +48,6 @@ node_modules/
 # ignore the books directory and m4b files
 books/
 *.m4b
+
+# ignore the database file
+.db
