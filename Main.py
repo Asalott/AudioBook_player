@@ -1,5 +1,7 @@
 # This is the main python file
 
+# Note: Remove the print statments after testing is done, they are only for debugging purposes
+
 # import
 import time
 # imports the find_books function from library.py

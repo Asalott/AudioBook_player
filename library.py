@@ -1,6 +1,8 @@
 # The library.py file
 from pathlib import Path
 
+# Note: Remove the print statments after testing is done, they are only for debugging purposes
+
 # This function finds all .m4b files in the specified folder and its subfolders.
 def find_books(folder_path):
     """Finds all .m4b files in the specified folder and its subfolders.
