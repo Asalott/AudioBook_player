@@ -9,16 +9,16 @@ from library import BookLibrary
 # imports the BookPlayer class from player.py
 from player import BookPlayer
 
-#
+# path to the SQLite database file
+DB_PATH = "books.db"
+
 # handles the main logic of the program, including finding books, creating a database, loading books into the database, and playing the selected book
 library = BookLibrary()
 books = library.find_books("books")  # finds all .m4b files in the specified folder and its subfolders
 
-library.create_database("books.db")  # creates a SQLite database to store book information
+library.create_database("DB_PATH")  # creates a SQLite database to store book information
 
-library.load_books_into_database("books.db", books)  # loads book information into the SQLite database
-
-DB_PATH = "books.db"  # path to the SQLite database file
+library.load_books_into_database("DB_PATH", books)  # loads book information into the SQLite database
 
 library.enumerate_books(DB_PATH)  # enumerates the books in the database and prints them with their index
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spelare</title>
+<style>
+:root{--bg:#e8ebf0;--ink:#1b2233;--muted:#5d667a;--track:#c3c9d6;--fill:#1b2233;--knob:#7b8190;--cover:#fff;--line:#111;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c2130;--ink:#f1f3f8;--muted:#a3abbe;--track:#3a4257;--fill:#f1f3f8;--knob:#9aa1b3;--cover:#f4f5f8;--line:#f1f3f8}}
+:root[data-theme="dark"]{--bg:#1c2130;--ink:#f1f3f8;--muted:#a3abbe;--track:#3a4257;--fill:#f1f3f8;--knob:#9aa1b3;--cover:#f4f5f8;--line:#f1f3f8}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center}
+.player{width:100%;max-width:440px;padding:24px;display:flex;flex-direction:column;align-items:center}
+.cover{width:min(64vw,260px);aspect-ratio:1;background:var(--cover);border:4px solid var(--line);border-radius:14%;display:flex;align-items:center;justify-content:center;color:#9aa1b3;font-size:14px}
+h1{font-size:30px;font-weight:400;margin:22px 0 26px;letter-spacing:.01em;text-align:center}
+.bar{width:100%}
+.chapter{font-size:14px;color:var(--muted);margin-bottom:10px}
+.track{position:relative;height:28px;cursor:pointer;touch-action:none;outline:none}
+.track::before{content:"";position:absolute;left:0;right:0;top:12px;height:4px;border-radius:2px;background:var(--track)}
+.fill{position:absolute;left:0;top:12px;height:4px;border-radius:2px;background:var(--fill)}
+.knob{position:absolute;top:4px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--knob)}
+.track:focus-visible .knob{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--ink)}
+.time{font-size:14px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.ctrl{width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:34px;padding:0 6px}
+button{background:none;border:0;padding:10px;color:var(--ink);cursor:pointer;border-radius:12px;display:grid;place-items:center}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button:active{opacity:.6}
+svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-linejoin:round;display:block}
+</style>
+</head>
+<body>
+<main class="player">
+  <div class="cover" aria-label="Omslag">Omslag</div>
+  <h1 id="title">Titel</h1>
+
+  <div class="bar">
+    <div class="chapter" id="chapter"></div>
+    <div class="track" id="track" role="slider" tabindex="0" aria-label="Position i kapitlet" aria-valuemin="0">
+      <div class="fill" id="fill"></div><div class="knob" id="knob"></div>
+    </div>
+    <div class="time" id="time"></div>
+  </div>
+
+  <div class="ctrl">
+    <button id="prev" aria-label="Föregående kapitel"><svg viewBox="0 0 60 60"><path d="M46 10 14 30 46 50z"/></svg></button>
+    <button id="play" aria-label="Spela"><svg id="icon" viewBox="0 0 60 60"></svg></button>
+    <button id="next" aria-label="Nästa kapitel"><svg viewBox="0 0 60 60"><path d="M14 10 46 30 14 50z"/></svg></button>
+  </div>
+</main>
+
+<script>
+// Exempeldata – byt ut mot riktiga kapitel
+const chapters=[{name:"Kapitel 1",len:1260},{name:"Kapitel 2",len:1845},{name:"Kapitel 3",len:1530}];
+let ch=0,pos=0,playing=false,timer=null;
+const $=id=>document.getElementById(id);
+const fmt=s=>{s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0")};
+const PAUSE='<rect x="14" y="8" width="10" height="44"/><rect x="36" y="8" width="10" height="44"/>';
+const PLAY='<path d="M16 8 52 30 16 52z"/>';
+
+function render(){
+  const c=chapters[ch],p=pos/c.len*100;
+  $("chapter").textContent=c.name;
+  $("fill").style.width=p+"%";$("knob").style.left=p+"%";
+  $("time").textContent="Speltid för kapitlet: "+fmt(pos)+" / "+fmt(c.len);
+  $("icon").innerHTML=playing?PAUSE:PLAY;
+  $("play").setAttribute("aria-label",playing?"Pausa":"Spela");
+  $("track").setAttribute("aria-valuemax",c.len);
+  $("track").setAttribute("aria-valuenow",Math.floor(pos));
+}
+function go(i){ch=Math.max(0,Math.min(chapters.length-1,i));pos=0;render()}
+function tick(){pos++;if(pos>=chapters[ch].len){if(ch<chapters.length-1)go(ch+1);else{pos=chapters[ch].len;toggle()}}render()}
+function toggle(){playing=!playing;clearInterval(timer);if(playing)timer=setInterval(tick,1000);render()}
+
+$("play").onclick=toggle;
+$("prev").onclick=()=>go(pos>3?ch:ch-1);
+$("next").onclick=()=>go(ch+1);
+
+const track=$("track");
+function seek(e){const r=track.getBoundingClientRect();
+  pos=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*chapters[ch].len;render()}
+track.addEventListener("pointerdown",e=>{track.setPointerCapture(e.pointerId);seek(e)});
+track.addEventListener("pointermove",e=>{if(track.hasPointerCapture(e.pointerId))seek(e)});
+track.addEventListener("keydown",e=>{
+  const d={ArrowRight:10,ArrowLeft:-10}[e.key];
+  if(d){pos=Math.max(0,Math.min(chapters[ch].len,pos+d));render();e.preventDefault()}});
+pos=380;render();
+</script>
+</body>
+</html>
