@@ -1,71 +1,52 @@
 # This is the main python file
 
+# Note: Remove the print statments after testing is done, they are only for debugging purposes
+
 # import
 import time
-
-import vlc
-
 # imports the find_books function from library.py
-from library import find_books
+from library import BookLibrary
+# imports the BookPlayer class from player.py
+from player import BookPlayer
 
-# time values in milliseconds for the audio player to only play the book for a certain amount of time
-sixty_minutes = 3600000  # sixty minutes in seconds
-forty_minutes = 2400000  # forty minutes in seconds
-thirty_minutes = 1800000  # thirty minutes in seconds
-fifteen_minutes = 900000  # fifteen minutes in seconds
+#
+# handles the main logic of the program, including finding books, creating a database, loading books into the database, and playing the selected book
+library = BookLibrary()
+books = library.find_books("books")  # finds all .m4b files in the specified folder and its subfolders
 
-# skip values in milliseconds for the audio player to skip forward or backward in the book
-skip_10sec = 10000  # ten seconds in milliseconds
+library.create_database("books.db")  # creates a SQLite database to store book information
 
-books = find_books("books")  # finds all the books in the books folder and its subfolders
-for i, book in enumerate(books):  # enumerates the books and prints them with their index
-    print(f"{i}: {book}")  # prints the index and the book path
+library.load_books_into_database("books.db", books)  # loads book information into the SQLite database
+
+DB_PATH = "books.db"  # path to the SQLite database file
+
+library.enumerate_books(DB_PATH)  # enumerates the books in the database and prints them with their index
 
 input_book = int(input("Input the number of the book you want to play: "))  # input from the user to select the book they want to play
 
-# path to the book
-book_path = books[input_book]
-print("Loading the book...")
+player = BookPlayer(books[input_book])  # creates a BookPlayer object with the selected book
 
 # input from the user to control the audio player hopefully it will be UI in the future
 input_play = input("Input play if you want to play the book: ").strip().lower()
-# input_skip_10sec = input(str("input skip 10sec if you want to skip 10 sec of the book:"))
-# input_back_10sec = input(str("input back 10sec if you want to go back 10 sec of the book:"))
 
-if input_play == "play":
-    # Designates the player
-    player = vlc.MediaPlayer(book_path)
-    print("Book loaded successfully.")
+if input_book < len(books):  # checks if the input is valid and within the range of the books list
+    # place holder vill be replaced with a UI in the future to control the audio player
+    if input_play == "play":
 
-    # plays the book
-    player.play()
-    print("Playing the book...")
-
-    time.sleep(1)  # adds a delay to allow the player to start to get a proper length value
-
-    # gets the length of the book in milliseconds
-    get_length = player.get_length()
-    print(f"Book length: {get_length} ms")
-
-    # time.sleep(get_length / 1000)  # plays the book for its entire length
-    # Optional: keep the loop running without blocking forever
-    while True:
-        # gets the current time of the book in milliseconds
-        get_time = player.get_time()
-        print(f"Current time: {get_time} ms")
-
-        input_pause = input(str("input pause if you want to pause the book:"))
+        player.play_book()  # plays the book using the BookPlayer object
         
-        # checks if the current time is greater than or equal to the length of the book
-        if get_time >= get_length:
-            print("Book finished playing.")
-            break
+        # Optional: keep the loop running without blocking forever
+        while True:
+            # gets the current time of the book in milliseconds
+            get_time = player.get_time()
+            print(f"Current time: {get_time} ms")
 
-        elif input_pause == "pause":
-            player.pause()
-            print("Book paused.")
-            break  # exit the loop after pausing
-        
-        time.sleep(1)  # adds a delay to avoid excessive CPU usage
-    print("Exiting the program.")
+            # place holder vill be replaced with a UI in the future to control the audio player
+            input_pause = input(str("input pause if you want to pause the book:"))
+            if input_pause == "pause":
+                player.pause_book()  # pauses the book using the BookPlayer object
 
+        print("Exiting the program.")
+# will add proper error handling in the future to handle invalid input and other errors
+elif input_book >= len(books):
+    print("Invalid book selection. Exiting the program.")
