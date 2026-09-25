@@ -2,6 +2,7 @@
 from pathlib import Path
 from mutagen.mp4 import MP4
 import sqlite3 # imports the sqlite3 module to interact with the SQLite database
+import re, subprocess, json
 
 # Note: Remove the print statments after testing is done, they are only for debugging purposes
 
@@ -35,11 +36,11 @@ class BookLibrary:
                 title TEXT NOT NULL,
                 author TEXT,
                 path TEXT NOT NULL UNIQUE,
-                cover_path TEXT NOT NULL
+                chapters TEXT,
+                cover_path TEXT
             )
         ''')
         self.conn.commit()
-
 
     def extract_cover_art(self, book_path, output_path):
         self.audio = MP4(book_path)
@@ -51,6 +52,13 @@ class BookLibrary:
             f.write(self.cover_data)
         return str(output_path)
 
+    def clean_title(self, title):
+        """Städar en boktitel för visning: tar bort ASIN-koder och konstiga tecken."""
+        title = re.sub(r'\[[^\]]*\]', '', title)              # tar bort [B09CVBKH5L] osv
+        title = re.sub(r'[^\w\s.,\'!?&:-]', '', title, flags=re.UNICODE)  # tar bort konstiga tecken
+        title = re.sub(r'\s+', ' ', title).strip()             # städar mellanslag
+        return title
+
 
     # This function loads book information into the SQLite database.
     def load_books_into_database(self, db_path, books):
@@ -60,16 +68,17 @@ class BookLibrary:
         covers_dir.mkdir(exist_ok=True)
 
         for book_path in books:
-            title = Path(book_path).stem
+            title = self.clean_title(Path(book_path).stem)
             author = "Unknown"
 
             cover_output = covers_dir / f"{Path(book_path).stem}.jpg"
             cover_path = self.extract_cover_art(book_path, cover_output)
+            chapters = self.extract_chapters(book_path)
 
             self.cursor.execute('''
-                INSERT OR IGNORE INTO books (title, author, path, cover_path)
-                VALUES (?, ?, ?, ?)
-            ''', (title, author, book_path, cover_path))
+                INSERT OR IGNORE INTO books (title, author, path, chapters, cover_path)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (title, author, book_path, json.dumps(chapters), cover_path))
         self.conn.commit()
 
     # This function retrieves all books from the SQLite database.
@@ -85,6 +94,29 @@ class BookLibrary:
         books = self.cursor.fetchall()
         self.conn.close()
         return books
+
+    def extract_chapters(self, book_path):
+        try:
+            result = subprocess.run(
+                ["ffprobe", "-i", book_path, "-print_format", "json", "-show_chapters", "-loglevel", "error"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=True
+            )
+            data = json.loads(result.stdout)
+            chapters = []
+            for ch in data.get("chapters", []):
+                chapters.append({
+                    "title": ch.get("tags", {}).get("title", "Okänt kapitel"),
+                    "start": float(ch.get("start_time", 0)),
+                    "end": float(ch.get("end_time", 0))
+                })
+            return chapters
+        except Exception as e:
+            print(f"Kunde inte extrahera kapitel: {e}")
+            return []
     
     # This function closes the database connection.
     def close_database(self):

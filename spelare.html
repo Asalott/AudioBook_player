@@ -14,6 +14,7 @@ html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center}
 .player{width:100%;max-width:440px;padding:24px;display:flex;flex-direction:column;align-items:center}
 .cover{width:min(64vw,260px);aspect-ratio:1;background:var(--cover);border:4px solid var(--line);border-radius:14%;display:flex;align-items:center;justify-content:center;color:#9aa1b3;font-size:14px}
+.cover img{width:100%;height:100%;object-fit:cover;display:block;border-radius:14%}
 h1{font-size:30px;font-weight:400;margin:22px 0 26px;letter-spacing:.01em;text-align:center}
 .bar{width:100%}
 .chapter{font-size:14px;color:var(--muted);margin-bottom:10px}
@@ -32,7 +33,7 @@ svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-l
 </head>
 <body>
 <main class="player">
-  <div class="cover" aria-label="Omslag">Omslag</div>
+  <div class="cover" id="cover" aria-label="Omslag"></div>
   <h1 id="title">Titel</h1>
 
   <div class="bar">
@@ -54,8 +55,8 @@ svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-l
 window.addEventListener("pagehide", () => {
   navigator.sendBeacon("/api/stop");
 });
-// Exempeldata – byt ut mot riktiga kapitel
-const chapters=[{name:"Kapitel 1",len:1260},{name:"Kapitel 2",len:1845},{name:"Kapitel 3",len:1530}];
+
+let chapters=[];
 let ch=0,pos=0,playing=false,timer=null;
 const $=id=>document.getElementById(id);
 const fmt=s=>{s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
@@ -64,22 +65,37 @@ const PAUSE='<rect x="14" y="8" width="10" height="44"/><rect x="36" y="8" width
 const PLAY='<path d="M16 8 52 30 16 52z"/>';
 
 function render(){
-  const c=chapters[ch],p=pos/c.len*100;
+  if(!chapters.length) return;
+  const c=chapters[ch],p=c.len?pos/c.len*100:0;
   $("chapter").textContent=c.name;
   $("fill").style.width=p+"%";$("knob").style.left=p+"%";
-  $("time").textContent="Speltid för kapitlet: "+fmt(pos)+" / "+fmt(c.len);
+  $("time").textContent=fmt(pos)+" / "+fmt(c.len);
   $("icon").innerHTML=playing?PAUSE:PLAY;
   $("play").setAttribute("aria-label",playing?"Pausa":"Spela");
   $("track").setAttribute("aria-valuemax",c.len);
   $("track").setAttribute("aria-valuenow",Math.floor(pos));
 }
+
+async function syncProgress(){
+  try{
+    const res = await fetch("/api/status");
+    if(!res.ok) return;
+    const data = await res.json();
+    pos = data.time / 1000;
+    if(chapters[ch]) chapters[ch].len = data.length / 1000;
+    render();
+  }catch(err){
+    console.error("Kunde inte synka progress:", err);
+  }
+}
+
 function go(i){ch=Math.max(0,Math.min(chapters.length-1,i));pos=0;render()}
 function tick(){pos++;if(pos>=chapters[ch].len){if(ch<chapters.length-1)go(ch+1);else{pos=chapters[ch].len;toggle()}}render()}
 function toggle(){
   playing=!playing;
   clearInterval(timer);
   if(playing){
-    timer=setInterval(tick,1000);
+    timer=setInterval(syncProgress,1000);
     fetch("/api/play",{method:"POST"});
   } else {
     fetch("/api/pause",{method:"POST"});
@@ -107,7 +123,31 @@ track.addEventListener("pointermove",e=>{if(track.hasPointerCapture(e.pointerId)
 track.addEventListener("keydown",e=>{
   const d={ArrowRight:10,ArrowLeft:-10}[e.key];
   if(d){pos=Math.max(0,Math.min(chapters[ch].len,pos+d));render();e.preventDefault()}});
-pos=380;render();
+
+async function loadCurrentBook(){
+  const res = await fetch("/api/current-book");
+  if(!res.ok) return;
+  const book = await res.json();
+
+  $("title").textContent = book.title;
+
+  if(book.cover){
+    const img = document.createElement("img");
+    img.src = book.cover;
+    img.alt = "Omslag";
+    $("cover").innerHTML = "";
+    $("cover").appendChild(img);
+  }
+
+  chapters = (book.chapters && book.chapters.length)
+    ? book.chapters.map(c => ({name: c.title, len: c.end - c.start, start: c.start}))
+    : [{name:"", len: 0}];
+  ch = 0;
+  pos = 0;
+  render();
+}
+
+loadCurrentBook();
 </script>
 </body>
 </html>
