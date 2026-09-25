@@ -9,8 +9,7 @@ from library import BookLibrary
 # imports the BookPlayer class from player.py
 from player import BookPlayer
 
-# path to the SQLite database file
-
+from server import app
 
 # handles the main logic of the program, including finding books, creating a database, loading books into the database, and playing the selected book
 library = BookLibrary()
@@ -20,9 +19,14 @@ library.create_database("books.db")  # creates a SQLite database to store book i
 
 library.load_books_into_database("books.db", scan)  # loads book information into the SQLite database
 
-input_book = int(input("Input the number of the book you want to play: "))  # input from the user to select the book they want to play
+# input_book = int(input("Input the number of the book you want to play: "))  # input from the user to select the book they want to play
 
-player = BookPlayer(scan[input_book])  # creates a BookPlayer object with the selected book
+#get_book = library.get_books_from_database("books.db")
+
+# player = BookPlayer(scan[input_book])  # creates a BookPlayer object with the selected book
+
+if __name__ == "__main__":
+     app.run(host="0.0.0.0", port=5000)
 
 library.close_database()  # closes the database connection after loading the books into the database
 

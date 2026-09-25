@@ -72,7 +72,25 @@ function render(){
 }
 function go(i){ch=Math.max(0,Math.min(chapters.length-1,i));pos=0;render()}
 function tick(){pos++;if(pos>=chapters[ch].len){if(ch<chapters.length-1)go(ch+1);else{pos=chapters[ch].len;toggle()}}render()}
-function toggle(){playing=!playing;clearInterval(timer);if(playing)timer=setInterval(tick,1000);render()}
+function toggle(){
+  playing=!playing;
+  clearInterval(timer);
+  if(playing){
+    timer=setInterval(tick,1000);
+    fetch("/api/play",{method:"POST"});
+  } else {
+    fetch("/api/pause",{method:"POST"});
+  }
+  render();
+}
+
+async function selectBook(id){
+  await fetch("/api/select-book", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({id: id})
+  });
+}
 
 $("play").onclick=toggle;
 $("prev").onclick=()=>go(pos>3?ch:ch-1);
