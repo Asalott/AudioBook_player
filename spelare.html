@@ -92,6 +92,10 @@ async function selectBook(id){
   });
 }
 
+window.addEventListener("pagehide", () => {
+  navigator.sendBeacon("/api/pause");
+});
+
 $("play").onclick=toggle;
 $("prev").onclick=()=>go(pos>3?ch:ch-1);
 $("next").onclick=()=>go(ch+1);
