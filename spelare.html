@@ -51,6 +51,9 @@ svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-l
 </main>
 
 <script>
+window.addEventListener("pagehide", () => {
+  navigator.sendBeacon("/api/stop");
+});
 // Exempeldata – byt ut mot riktiga kapitel
 const chapters=[{name:"Kapitel 1",len:1260},{name:"Kapitel 2",len:1845},{name:"Kapitel 3",len:1530}];
 let ch=0,pos=0,playing=false,timer=null;
@@ -91,10 +94,6 @@ async function selectBook(id){
     body: JSON.stringify({id: id})
   });
 }
-
-window.addEventListener("pagehide", () => {
-  navigator.sendBeacon("/api/pause");
-});
 
 $("play").onclick=toggle;
 $("prev").onclick=()=>go(pos>3?ch:ch-1);

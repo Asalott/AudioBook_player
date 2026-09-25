@@ -42,7 +42,7 @@ def get_books():
     cursor.execute("SELECT id, title, author, path, cover_path FROM books")
     rows = cursor.fetchall()
     conn.close()
-    books = [{"id": r[0], "title": r[1], "author": r[2], "path": r[3], "cover_path": r[4]} for r in rows]
+    books = [{"id": r[0], "title": r[1], "author": r[2], "path": r[3], "cover": f"/covers/{Path(r[4]).name}"} for r in rows]
     return jsonify(books)
 
 # plays the book
@@ -58,6 +58,11 @@ def play():
 def pause():
     player.pause_book()
     return jsonify({"status": "pause"})
+
+@app.post("/api/stop")
+def stop():
+    player.stop_book()
+    return jsonify({"status": "stop"})
 
 # skips 10 secounds of the book
 @app.get("/api/skip")

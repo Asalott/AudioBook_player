@@ -79,3 +79,7 @@ class BookPlayer:
         # Placeholder implementation; actual cover art retrieval would require additional metadata
         print("Cover art retrieval not implemented.")
         return None
+
+    def stop_book(self):
+        self.player.stop()
+        print("Book stopped.")
