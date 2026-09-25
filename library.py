@@ -37,7 +37,6 @@ class BookLibrary:
             )
         ''')
         self.conn.commit()
-        self.conn.close()
 
     # This function loads book information into the SQLite database.
     def load_books_into_database(self, db_path, books):
