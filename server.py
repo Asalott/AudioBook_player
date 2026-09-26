@@ -10,6 +10,7 @@ db = BookLibrary()
 
 player = None
 current_book = None
+current_book_id = None
 
 # this function gets the main page of the web application and returns the HTML file
 @app.get("/")
@@ -22,23 +23,38 @@ def bibliotek():
 
 @app.post("/api/select-book")
 def select_book():
-    global player, current_book
+    global player, current_book, current_book_id
     book_id = request.json.get("id")
     conn = sqlite3.connect("books.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, path, chapters, cover_path FROM books WHERE id = ?", (book_id,))
+    cursor.execute("SELECT id, title, path, chapters, cover_path, last_position FROM books WHERE id = ?", (book_id,))
     row = cursor.fetchone()
     conn.close()
     if row is None:
         return jsonify({"status": "error", "message": "Book not found"}), 404
     chapters = json.loads(row[3]) if row[3] else []
+    current_book_id = row[0]
+    last_position = row[5] or 0
     current_book = {
         "id": row[0],
         "title": row[1],
         "cover": f"/covers/{Path(row[4]).name}" if row[4] else None,
-        "chapters": chapters
+        "chapters": chapters,
+        "position": last_position   # i millisekunder
     }
     player = BookPlayer(row[2], chapters=chapters)
+
+    # Ladda/buffra filen direkt vid bokval, så play-knappen känns snabbare senare.
+    player.player.audio_set_mute(True)
+    player.player.play()
+    time.sleep(0.15)
+    player.player.pause()
+    player.player.audio_set_mute(False)
+
+    last_position = row[5] or 0
+    if last_position > 0:
+        player.player.set_time(last_position)
+
     return jsonify({"status": "ok"})
 
 @app.get("/api/current-book")
@@ -71,12 +87,14 @@ def pause():
     if player is None:
         return jsonify({"status": "error", "message": "No book selected"}), 400
     player.pause_book()
+    db.save_position("books.db", current_book_id, player.get_time())
     return jsonify({"status": "pause"})
 
 @app.post("/api/stop")
 def stop():
     if player is None:
         return jsonify({"status": "error", "message": "No book selected"}), 400
+    db.save_position("books.db", current_book_id, player.get_time())
     player.stop_book()
     return jsonify({"status": "stop"})
 
@@ -133,6 +151,13 @@ def status():
         "time": player.get_time(),
         "length": player.get_length()
     })
+
+@app.post("/api/save-position")
+def save_position():
+    if player is None or current_book_id is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
+    db.save_position("books.db", current_book_id, player.get_time())
+    return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
      app.run(host="0.0.0.0", port=5000)

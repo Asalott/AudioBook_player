@@ -123,6 +123,21 @@ class BookLibrary:
         except Exception as e:
             print(f"Kunde inte extrahera kapitel: {e}")
             return []
+
+    def save_position(self, db_path, book_id, milliseconds):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE books SET last_position = ? WHERE id = ?", (milliseconds, book_id))
+        conn.commit()
+        conn.close()
+
+    def get_position(self, db_path, book_id):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT last_position FROM books WHERE id = ?", (book_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else 0
     
     # This function closes the database connection.
     def close_database(self):

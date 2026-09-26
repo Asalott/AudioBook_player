@@ -24,6 +24,49 @@ body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-app
 .sleep-label{position:absolute;top:-2px;right:-6px;font-size:10px;font-weight:600;background:var(--ink);color:var(--bg);border-radius:8px;padding:1px 5px;line-height:1.3;display:none}
 .icon-btn-sm.active .sleep-label{display:block}
 
+.top-actions.left{left:18px;right:auto}
+
+.cover-wrap{position:relative;width:min(64vw,260px)}
+
+.cover{
+  width:100%;
+  aspect-ratio:1;
+  background:var(--cover);
+  border:4px solid var(--line);
+  border-radius:14%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#9aa1b3;
+  font-size:14px
+}
+
+.sleep-status{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:5px 12px;
+  border-radius:999px;display:none;align-items:center;gap:6px;
+  cursor:pointer;z-index:5;
+}
+.sleep-status.show{display:inline-flex}
+.sleep-status svg{width:14px;height:14px;fill:currentColor;stroke:none}
+
+.sleep-menu{
+  position:absolute;top:56px;right:18px;z-index:10;
+  background:var(--panel);border:2px solid var(--line);border-radius:14px;
+  padding:10px 14px;display:flex;align-items:center;gap:4px;
+  transform:translateY(-6px);opacity:0;pointer-events:none;
+  transition:transform .16s ease,opacity .16s ease;
+}
+.sleep-menu.open{transform:translateY(0);opacity:1;pointer-events:auto}
+.sleep-menu-title{font-size:12px;color:var(--muted);padding:0 10px 0 2px;border-right:1px solid var(--track);margin-right:4px}
+.sleep-option{background:none;border:0;padding:8px 12px;color:var(--ink);font-size:15px;
+  border-radius:8px;cursor:pointer;white-space:nowrap}
+.sleep-option:hover{background:var(--bg)}
+.sleep-cancel{margin-left:4px;padding-left:10px;border-left:1px solid var(--track);
+  color:#c0392b;font-size:13px;background:none;border-top:0;border-right:0;border-bottom:0;
+  border-radius:0;cursor:pointer;display:none;white-space:nowrap}
+.sleep-menu.timer-active .sleep-cancel{display:inline-block}
+
 .cover{width:min(64vw,260px);aspect-ratio:1;background:var(--cover);border:4px solid var(--line);border-radius:14%;display:flex;align-items:center;justify-content:center;color:#9aa1b3;font-size:14px}
 .cover img{width:100%;height:100%;object-fit:cover;display:block;border-radius:14%}
 h1{font-size:30px;font-weight:400;margin:22px 0 26px;letter-spacing:.01em;text-align:center}
@@ -49,6 +92,11 @@ svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-l
 </head>
 <body>
 <main class="player">
+  <div class="top-actions left">
+    <a href="/" class="icon-btn-sm" aria-label="Tillbaka till biblioteket">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </a>
+</div>
 
   <div class="top-actions">
     <button id="sleepBtn" class="icon-btn-sm" aria-label="Sleeptimer" aria-pressed="false">
@@ -57,7 +105,21 @@ svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-l
     </button>
   </div>
 
-  <div class="cover" id="cover" aria-label="Omslag"></div>
+  <div class="sleep-menu" id="sleepDrawer">
+    <span class="sleep-menu-title">Sleeptimer</span>
+    <button class="sleep-option" data-min="30">30 min</button>
+    <button class="sleep-option" data-min="45">45 min</button>
+    <button class="sleep-option" data-min="60">60 min</button>
+    <button class="sleep-cancel" id="sleepCancelBtn">Avbryt</button>
+  </div>
+
+  <div class="cover-wrap">
+    <div class="cover" id="cover" aria-label="Omslag"></div>
+    <div class="sleep-status" id="sleepStatus">
+      <svg viewBox="0 0 24 24"><path d="M14 3a9 9 0 1 0 7 14.7A7.5 7.5 0 0 1 14 3z"/></svg>
+      <span id="sleepStatusText"></span>
+    </div>
+  </div>
   <h1 id="title">Titel</h1>
 
   <div class="bar">
@@ -123,21 +185,24 @@ function setChapterIndex(i){
   render();
 }
 
+let syncTickCount = 0;
 async function syncProgress(){
   try{
     const res = await fetch("/api/status");
     if(!res.ok) return;
     const data = await res.json();
     const absoluteSec = data.time / 1000;
-    //pos = data.time / 1000;
-    //if(chapters[ch]) chapters[ch].len = data.length / 1000;
-     // Hitta rätt kapitel utifrån var uppspelningen faktiskt är, inte bara senaste knapptryck
-    let idx = chapters.findIndex(c => absoluteSec >= c.start && absoluteSec < c.start + c.len);
-    if(idx === -1) idx = chapters.length - 1;
-    ch = idx;
+
+    const idx = chapters.findIndex(c => absoluteSec >= c.start && absoluteSec < c.start + c.len);
+    if(idx !== -1) ch = idx;
 
     pos = Math.max(0, absoluteSec - chapters[ch].start);
     render();
+
+    syncTickCount++;
+    if(syncTickCount % 10 === 0){
+      fetch("/api/save-position", {method:"POST"});
+    }
   }catch(err){
     console.error("Kunde inte synka progress:", err);
   }
@@ -208,8 +273,13 @@ async function loadCurrentBook(){
   chapters = (book.chapters && book.chapters.length)
     ? book.chapters.map(c => ({name: c.title, len: c.end - c.start, start: c.start}))
     : [{name:"", len: 0}];
-  ch = 0;
-  pos = 0;
+
+  const savedSec = (book.position || 0) / 1000;
+  let idx = chapters.findIndex(c => savedSec >= c.start && savedSec < c.start + c.len);
+  if(idx === -1) idx = 0;
+  ch = idx;
+  pos = Math.max(0, savedSec - chapters[ch].start);
+
   render();
 }
 
@@ -234,32 +304,54 @@ $("skipBack").onclick=()=>skipBy(-15000);
 $("skipFwd").onclick=()=>skipBy(30000);
 
 let sleepTimerActive=false;
-$("sleepBtn").onclick=async()=>{
-  if(sleepTimerActive){
-    // Avbryt pågående sleeptimer
-    await fetch("/api/sleep-timer/cancel",{method:"POST"}).catch(()=>{});
-    sleepTimerActive=false;
-    $("sleepBtn").classList.remove("active");
-    $("sleepBtn").setAttribute("aria-pressed","false");
-    $("sleepLabel").textContent="";
-    return;
+const sleepDrawer=$("sleepDrawer");
+
+function toggleDrawer(open){
+  sleepDrawer.classList.toggle("open", open);
+}
+
+$("sleepBtn").onclick=()=>toggleDrawer(!sleepDrawer.classList.contains("open"));
+
+document.addEventListener("click",(e)=>{
+  if(!sleepDrawer.contains(e.target) && e.target!==$("sleepBtn") && !$("sleepBtn").contains(e.target)){
+    toggleDrawer(false);
   }
-  const min = prompt("Stäng av uppspelningen om hur många minuter?","30");
-  if(!min || isNaN(Number(min))) return;
+});
+
+async function startSleepTimer(minutes){
   try{
     await fetch("/api/sleep-timer",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({minutes:Number(min)})
+      body: JSON.stringify({minutes})
     });
     sleepTimerActive=true;
     $("sleepBtn").classList.add("active");
     $("sleepBtn").setAttribute("aria-pressed","true");
-    $("sleepLabel").textContent=min;
+    $("sleepStatusText").textContent=minutes+" min";
+    $("sleepStatus").classList.add("show");
+    sleepDrawer.classList.add("timer-active");
   }catch(err){
     console.error("Kunde inte starta sleeptimer:", err);
   }
-};
+  toggleDrawer(false);
+}
+
+async function cancelSleepTimer(){
+  await fetch("/api/sleep-timer/cancel",{method:"POST"}).catch(()=>{});
+  sleepTimerActive=false;
+  $("sleepBtn").classList.remove("active");
+  $("sleepBtn").setAttribute("aria-pressed","false");
+  $("sleepStatus").classList.remove("show");
+  sleepDrawer.classList.remove("timer-active");
+  toggleDrawer(false);
+}
+
+sleepDrawer.querySelectorAll(".sleep-option").forEach(btn=>{
+  btn.onclick=()=>startSleepTimer(Number(btn.dataset.min));
+});
+$("sleepCancelBtn").onclick=cancelSleepTimer;
+$("sleepStatus").onclick=()=>toggleDrawer(true);
 </script>
 </body>
 </html>
