@@ -11,7 +11,7 @@ class BookPlayer:
     def __init__(self, BookPath, chapters=None):
         self.instance = vlc.Instance("--file-caching=100")
         self.book_path = BookPath
-        self.player = vlc.MediaPlayer(self.book_path)
+        self.player = self.instance.media_player_new(self.book_path)
         self.chapters = chapters or []  # lista med {"title", "start", "end"} i sekunder
         self.sleep_deadline = None
 

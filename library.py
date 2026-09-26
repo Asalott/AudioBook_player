@@ -37,9 +37,15 @@ class BookLibrary:
                 author TEXT,
                 path TEXT NOT NULL UNIQUE,
                 chapters TEXT,
-                cover_path TEXT
+                cover_path TEXT,
+                last_position INTEGER DEFAULT 0
             )
         ''')
+        try:
+            self.cursor.execute("ALTER TABLE books ADD COLUMN last_position INTEGER DEFAULT 0")
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass  # kolumnen finns redan om databasen skapats tidigare
         self.conn.commit()
 
     def extract_cover_art(self, book_path, output_path):

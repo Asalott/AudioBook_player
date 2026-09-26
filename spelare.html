@@ -113,14 +113,30 @@ function render(){
   $("track").setAttribute("aria-valuemax",c.len);
   $("track").setAttribute("aria-valuenow",Math.floor(pos));
 }
+let suppressAutoChapterSync = false;
+
+function setChapterIndex(i){
+  ch = Math.max(0, Math.min(chapters.length-1, i));
+  pos = 0;
+  suppressAutoChapterSync = true;
+  setTimeout(() => { suppressAutoChapterSync = false; }, 1500);
+  render();
+}
 
 async function syncProgress(){
   try{
     const res = await fetch("/api/status");
     if(!res.ok) return;
     const data = await res.json();
-    pos = data.time / 1000;
-    if(chapters[ch]) chapters[ch].len = data.length / 1000;
+    const absoluteSec = data.time / 1000;
+    //pos = data.time / 1000;
+    //if(chapters[ch]) chapters[ch].len = data.length / 1000;
+     // Hitta rätt kapitel utifrån var uppspelningen faktiskt är, inte bara senaste knapptryck
+    let idx = chapters.findIndex(c => absoluteSec >= c.start && absoluteSec < c.start + c.len);
+    if(idx === -1) idx = chapters.length - 1;
+    ch = idx;
+
+    pos = Math.max(0, absoluteSec - chapters[ch].start);
     render();
   }catch(err){
     console.error("Kunde inte synka progress:", err);
@@ -151,10 +167,6 @@ async function selectBook(id){
 
 $("play").onclick=toggle;
 
-function setChapterIndex(i){
-  ch = Math.max(0, Math.min(chapters.length-1, i));
-  render();
-}
 
 async function nextChapter(){
   setChapterIndex(ch+1);

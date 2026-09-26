@@ -68,27 +68,36 @@ def play():
 # pauses the book
 @app.post("/api/pause")
 def pause():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     player.pause_book()
     return jsonify({"status": "pause"})
 
 @app.post("/api/stop")
 def stop():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     player.stop_book()
     return jsonify({"status": "stop"})
 
-# skips 10 secounds of the book
 @app.get("/api/skip")
 def skip():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     player.skip_forward(10000)
     return jsonify({"status": "skip"})
 
 @app.post("/api/next-chapter")
 def next_chapter():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     player.skip_chapter()
     return jsonify({"status": "ok"})
 
 @app.post("/api/prev-chapter")
 def prev_chapter():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     player.go_back_chapter()
     return jsonify({"status": "ok"})
 
@@ -98,6 +107,8 @@ def get_cover(filename):
 
 @app.post("/api/seek")
 def seek():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     ms = request.json.get("ms", 0)
     if ms >= 0:
         player.skip_forward(ms)
@@ -107,6 +118,8 @@ def seek():
 
 @app.post("/api/sleep-timer")
 def sleep_timer():
+    if player is None:
+        return jsonify({"status": "error", "message": "No book selected"}), 400
     minutes = request.json.get("minutes", 0)
     player.start_sleep_timer(minutes * 60 * 1000)
     return jsonify({"status": "ok"})
