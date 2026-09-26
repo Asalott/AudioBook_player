@@ -47,3 +47,5 @@ node_modules/
 
 # ignore the books directory
 books/
+
+*.jpg
