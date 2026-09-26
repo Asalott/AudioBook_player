@@ -45,6 +45,12 @@ class BookLibrary:
                 self.cursor.execute(f"ALTER TABLE books ADD COLUMN {column} {coltype}")
             except sqlite3.OperationalError:
                 pass
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        ''')
         self.conn.commit()
 
     def extract_cover_art(self, book_path, output_path):
@@ -215,6 +221,25 @@ class BookLibrary:
             print(f"Kunde inte läsa författare: {e}")
 
         return "Okänd"
+
+    def set_last_book(self, db_path, book_id):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO settings (key, value) VALUES ('last_book_id', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        ''', (str(book_id),))
+        conn.commit()
+        conn.close()
+
+    def get_last_book(self, db_path):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM settings WHERE key = 'last_book_id'")
+        row = cursor.fetchone()
+        conn.close()
+        return int(row[0]) if row else None
+    
 
     # This function closes the database connection.
     def close_database(self):

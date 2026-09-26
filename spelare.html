@@ -22,6 +22,7 @@ h1{font-size:clamp(26px,6vw,34px);font-weight:500;margin:25px 0 30px;letter-spac
 .track{position:relative;height:30px;cursor:pointer;touch-action:none;outline:none}.track::before{content:"";position:absolute;left:0;right:0;top:13px;height:5px;border-radius:999px;background:var(--track)}.fill{position:absolute;left:0;top:13px;height:5px;border-radius:999px;background:var(--fill);transition:width .08s linear}.knob{position:absolute;top:5px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--knob);box-shadow:0 2px 7px rgba(45,35,25,.2);transition:transform .15s ease-out,box-shadow .15s ease-out}.track:hover .knob{transform:scale(1.12);box-shadow:0 3px 10px rgba(45,35,25,.24)}.track:focus-visible .knob{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--fill)}.time{font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .ctrl{width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding:0 2px}button{background:none;border:0;padding:10px;color:var(--ink);cursor:pointer;border-radius:14px;display:grid;place-items:center;transition:transform .16s ease-out,background .16s ease-out,color .16s ease-out}button:hover{background:var(--panel);transform:translateY(-2px)}button:focus-visible{outline:2px solid var(--fill);outline-offset:3px}button:active{transform:translateY(1px) scale(.95);opacity:.8}
 svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;display:block}#play{width:76px;height:76px;border:1px solid var(--line);border-radius:50%;background:var(--panel);box-shadow:0 10px 24px rgba(45,35,25,.14)}#play:hover{box-shadow:0 14px 30px rgba(45,35,25,.18)}#play svg{width:46px;height:46px}.skip svg{width:38px;height:38px}.skip text{font-family:inherit;font-weight:600}
+.knob{display:none}
 @media (max-width:560px){.player{padding:48px 20px 30px}.cover-wrap{width:min(72vw,290px)}.sleep-menu{right:12px;left:12px;justify-content:center;flex-wrap:wrap}.sleep-menu-title{display:none}.ctrl{margin-top:28px}.ctrl button{padding:8px}.ctrl svg{width:48px;height:48px}.skip svg{width:34px;height:34px}#play{width:68px;height:68px}#play svg{width:42px;height:42px}}
 @media (prefers-reduced-motion:reduce){.cover,.icon-btn-sm,.sleep-menu,.knob,button{transition:none}}
 </style>
@@ -185,8 +186,6 @@ $("next").onclick=nextChapter;
 const track=$("track");
 function seek(e){const r=track.getBoundingClientRect();
   pos=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*chapters[ch].len;render()}
-track.addEventListener("pointerdown",e=>{track.setPointerCapture(e.pointerId);seek(e)});
-track.addEventListener("pointermove",e=>{if(track.hasPointerCapture(e.pointerId))seek(e)});
 track.addEventListener("keydown",e=>{
   const d={ArrowRight:10,ArrowLeft:-10}[e.key];
   if(d){pos=Math.max(0,Math.min(chapters[ch].len,pos+d));render();e.preventDefault()}});

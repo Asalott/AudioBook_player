@@ -7,6 +7,9 @@ import sqlite3, json, time
 
 app = Flask(__name__)
 db = BookLibrary()
+db.create_database("books.db") 
+
+HOST = "127.0.0.1"
 
 player = None
 current_book = None
@@ -21,40 +24,44 @@ def index():
 def bibliotek():
     return send_from_directory(Path(__file__).parent, "spelare.html")
 
-@app.post("/api/select-book")
-def select_book():
+def load_book_by_id(book_id):
     global player, current_book, current_book_id
-    book_id = request.json.get("id")
     conn = sqlite3.connect("books.db")
     cursor = conn.cursor()
     cursor.execute("SELECT id, title, path, chapters, cover_path, last_position FROM books WHERE id = ?", (book_id,))
     row = cursor.fetchone()
     conn.close()
     if row is None:
-        return jsonify({"status": "error", "message": "Book not found"}), 404
+        return False
+
     chapters = json.loads(row[3]) if row[3] else []
-    current_book_id = row[0]
-    last_position = row[5] or 0
     current_book = {
         "id": row[0],
         "title": row[1],
         "cover": f"/covers/{Path(row[4]).name}" if row[4] else None,
         "chapters": chapters,
-        "position": last_position   # i millisekunder
+        "position": row[5] or 0
     }
+    current_book_id = row[0]
     player = BookPlayer(row[2], chapters=chapters)
 
-    # Ladda/buffra filen direkt vid bokval, så play-knappen känns snabbare senare.
     player.player.audio_set_mute(True)
     player.player.play()
     time.sleep(0.15)
     player.player.pause()
     player.player.audio_set_mute(False)
 
-    last_position = row[5] or 0
-    if last_position > 0:
-        player.player.set_time(last_position)
+    if row[5]:
+        player.player.set_time(row[5])
 
+    return True
+
+@app.post("/api/select-book")
+def select_book():
+    book_id = request.json.get("id")
+    if not load_book_by_id(book_id):
+        return jsonify({"status": "error", "message": "Book not found"}), 404
+    db.set_last_book("books.db", book_id)
     return jsonify({"status": "ok"})
 
 @app.get("/api/current-book")
@@ -163,6 +170,12 @@ def status():
         "length": player.get_length()
     })
 
+@app.post("/api/scan-library")
+def scan_library():
+    scan = db.find_books("books")
+    db.load_books_into_database("books.db", scan)
+    return jsonify({"status": "ok", "found": len(scan)})
+
 @app.post("/api/save-position")
 def save_position():
     if player is None or current_book_id is None:
@@ -170,5 +183,9 @@ def save_position():
     db.save_position("books.db", current_book_id, player.get_time())
     return jsonify({"status": "ok"})
 
+last_book_id = db.get_last_book("books.db")
+if last_book_id:
+    load_book_by_id(last_book_id)
+
 if __name__ == "__main__":
-     app.run(host="0.0.0.0", port=5000)
+     app.run(host=HOST, port=5000)
