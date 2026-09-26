@@ -67,10 +67,21 @@ def get_current_book():
 def get_books():
     conn = sqlite3.connect("books.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, author, path, cover_path FROM books")
+    cursor.execute('''
+        SELECT id, title, author, path, cover_path, series, volume
+        FROM books
+        ORDER BY
+            CASE WHEN series IS NULL THEN 1 ELSE 0 END,
+            series,
+            volume
+    ''')
     rows = cursor.fetchall()
     conn.close()
-    books = [{"id": r[0], "title": r[1], "author": r[2], "path": r[3], "cover": f"/covers/{Path(r[4]).name}"} for r in rows]
+    books = [{
+        "id": r[0], "title": r[1], "author": r[2], "path": r[3],
+        "cover": f"/covers/{Path(r[4]).name}",
+        "series": r[5], "volume": r[6]
+    } for r in rows]
     return jsonify(books)
 
 # plays the book

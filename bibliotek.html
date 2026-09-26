@@ -5,27 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bokhylla</title>
 <style>
-:root{--bg:#e8ebf0;--ink:#1b2233;--muted:#5d667a;--card:#fff;--line:#111;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c2130;--ink:#f1f3f8;--muted:#a3abbe;--card:#262c40;--line:#f1f3f8}}
-:root[data-theme="dark"]{--bg:#1c2130;--ink:#f1f3f8;--muted:#a3abbe;--card:#262c40;--line:#f1f3f8}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;padding:24px}
-h1{font-size:26px;font-weight:400;margin:0 0 20px;text-align:center}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:18px;max-width:900px;margin:0 auto}
-.book{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .1s}
-.book:hover{transform:translateY(-2px)}
-.book:active{opacity:.6}
-.cover{width:100%;aspect-ratio:1/1;background:var(--bg);border:2px solid var(--line);border-radius:6%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;margin-bottom:10px}
-.title{font-size:14px;line-height:1.3}
-.author{font-size:12px;color:var(--muted);margin-top:4px}
-.status{text-align:center;color:var(--muted);margin-top:40px}
+:root{--bg:#f3eee6;--ink:#28251f;--muted:#746d61;--card:#fbf8f2;--line:#d8d0c2;--accent:#8a6845;--shadow:0 14px 35px rgba(54,43,30,.12);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#181714;--ink:#f3efe7;--muted:#aaa295;--card:#24221e;--line:#403c35;--accent:#c6a47d;--shadow:0 18px 40px rgba(0,0,0,.35)}}
+:root[data-theme="dark"]{--bg:#181714;--ink:#f3efe7;--muted:#aaa295;--card:#24221e;--line:#403c35;--accent:#c6a47d;--shadow:0 18px 40px rgba(0,0,0,.35)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{min-height:100%;background:radial-gradient(circle at 15% 0%,rgba(138,104,69,.08),transparent 28rem),radial-gradient(circle at 100% 100%,rgba(138,104,69,.06),transparent 30rem),var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;padding:clamp(24px,5vw,56px)}
+h1{font-size:clamp(28px,4vw,38px);font-weight:500;letter-spacing:-.025em;margin:0 auto 30px;text-align:center}
+.library{display:flex;flex-direction:column;gap:32px;max-width:900px;margin:0 auto}
+.series-section{width:100%}
+.series-heading{font-size:18px;font-weight:600;margin:0 0 14px;color:var(--ink);text-align:left}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:18px}
+.book{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:var(--shadow);transition:transform .22s ease-out,box-shadow .22s ease-out,border-color .22s ease-out}
+.book::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 1px 0 rgba(255,255,255,.35),inset 0 1px rgba(255,255,255,.22);opacity:.8}
+.book:hover{transform:translateY(-6px);box-shadow:0 20px 42px rgba(54,43,30,.18);border-color:var(--accent)}
+.book:active{transform:translateY(-2px) scale(.99);opacity:.9}
+.cover{width:100%;aspect-ratio:1/1;background:var(--bg);border:1px solid var(--line);border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;margin-bottom:13px;object-fit:cover;box-shadow:0 7px 16px rgba(45,35,25,.14);transition:transform .22s ease-out,box-shadow .22s ease-out}
+.book:hover .cover{transform:scale(1.018);box-shadow:0 10px 22px rgba(45,35,25,.18)}
+.title{font-size:14px;line-height:1.35;font-weight:600;letter-spacing:.005em}.author{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.3}.status{text-align:center;color:var(--muted);margin:44px auto 0;max-width:520px}
+@media (max-width:560px){body{padding:28px 16px}h1{margin-bottom:24px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.book{padding:9px;border-radius:12px}.cover{margin-bottom:10px}}
+@media (min-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(175px,1fr))}}
+@media (prefers-reduced-motion:reduce){.book,.cover{transition:none}.book:hover{transform:none}.book:hover .cover{transform:none}}
 </style>
 </head>
 <body>
 <h1>Bokhylla</h1>
-<div class="grid" id="grid"></div>
+<div class="library" id="library"></div>
 <div class="status" id="status"></div>
 
 <script>
@@ -42,27 +46,53 @@ async function loadBooks(){
       return;
     }
 
-    grid.innerHTML = "";
+    const library = document.getElementById("library");
+    library.innerHTML = "";
+
+    // Gruppera böcker efter serie (böcker utan serie hamnar var för sig under "Övrigt")
+    const groups = new Map();
     books.forEach(book => {
-      const card = document.createElement("div");
-      card.className = "book";
+      const key = book.series || "Övrigt";
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(book);
+    });
 
-      const img = document.createElement("img");
-      img.className = "cover";
-      img.alt = "Omslag";
-      img.src = book.cover;
+    groups.forEach((groupBooks, seriesName) => {
+      const section = document.createElement("section");
+      section.className = "series-section";
 
-      const title = document.createElement("div");
-      title.className = "title";
-      title.textContent = book.title;
+      const heading = document.createElement("h2");
+      heading.className = "series-heading";
+      heading.textContent = seriesName;
+      section.appendChild(heading);
 
-      const author = document.createElement("div");
-      author.className = "author";
-      author.textContent = book.author ?? "";
+      const grid = document.createElement("div");
+      grid.className = "grid";
 
-      card.append(img, title, author);
-      card.onclick = () => selectBook(book.id);
-      grid.appendChild(card);
+      groupBooks.forEach(book => {
+        const card = document.createElement("div");
+        card.className = "book";
+
+        const img = document.createElement("img");
+        img.className = "cover";
+        img.alt = "Omslag";
+        img.src = book.cover;
+
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = book.title;
+
+        const author = document.createElement("div");
+        author.className = "author";
+        author.textContent = book.author ?? "";
+
+        card.append(img, title, author);
+        card.onclick = () => selectBook(book.id);
+        grid.appendChild(card);
+      });
+
+      section.appendChild(grid);
+      library.appendChild(section);
     });
   }catch(err){
     status.textContent = "Kunde inte hämta böcker: " + err.message;
