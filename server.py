@@ -9,6 +9,7 @@ app = Flask(__name__)
 db = BookLibrary()
 
 player = None
+current_book = None
 
 # this function gets the main page of the web application and returns the HTML file
 @app.get("/")
@@ -30,13 +31,14 @@ def select_book():
     conn.close()
     if row is None:
         return jsonify({"status": "error", "message": "Book not found"}), 404
+    chapters = json.loads(row[3]) if row[3] else []
     current_book = {
         "id": row[0],
         "title": row[1],
         "cover": f"/covers/{Path(row[4]).name}" if row[4] else None,
-        "chapters": json.loads(row[3]) if row[3] else []
+        "chapters": chapters
     }
-    player = BookPlayer(row[2])
+    player = BookPlayer(row[2], chapters=chapters)
     return jsonify({"status": "ok"})
 
 @app.get("/api/current-book")
@@ -80,17 +82,43 @@ def skip():
     player.skip_forward(10000)
     return jsonify({"status": "skip"})
 
+@app.post("/api/next-chapter")
+def next_chapter():
+    player.skip_chapter()
+    return jsonify({"status": "ok"})
+
+@app.post("/api/prev-chapter")
+def prev_chapter():
+    player.go_back_chapter()
+    return jsonify({"status": "ok"})
+
 @app.get("/covers/<filename>")
 def get_cover(filename):
     return send_from_directory(Path(__file__).parent / "covers", filename)
+
+@app.post("/api/seek")
+def seek():
+    ms = request.json.get("ms", 0)
+    if ms >= 0:
+        player.skip_forward(ms)
+    else:
+        player.skip_backward(-ms)
+    return jsonify({"status": "ok"})
+
+@app.post("/api/sleep-timer")
+def sleep_timer():
+    minutes = request.json.get("minutes", 0)
+    player.start_sleep_timer(minutes * 60 * 1000)
+    return jsonify({"status": "ok"})
 
 @app.get("/api/status")
 def status():
     if player is None:
         return jsonify({"status": "error", "message": "No book selected"}), 404
+    player.check_sleep_timer()
     return jsonify({
-        "time": player.get_time(),      # i millisekunder
-        "length": player.get_length()   # i millisekunder
+        "time": player.get_time(),
+        "length": player.get_length()
     })
 
 if __name__ == "__main__":

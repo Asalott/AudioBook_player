@@ -8,9 +8,12 @@ import vlc
 # This is the player class that is used to play audio books using the VLC media player
 class BookPlayer:
     # This class is used to play audio books using the VLC media player.
-    def __init__(self, BookPath):
+    def __init__(self, BookPath, chapters=None):
+        self.instance = vlc.Instance("--file-caching=100")
         self.book_path = BookPath
         self.player = vlc.MediaPlayer(self.book_path)
+        self.chapters = chapters or []  # lista med {"title", "start", "end"} i sekunder
+        self.sleep_deadline = None
 
     # This function is used to play the book using the VLC media player
     def play_book(self):
@@ -79,6 +82,58 @@ class BookPlayer:
         # Placeholder implementation; actual cover art retrieval would require additional metadata
         print("Cover art retrieval not implemented.")
         return None
+
+    def start_sleep_timer(self, milliseconds):
+        self.sleep_deadline = self.get_time() + milliseconds
+
+    def check_sleep_timer(self):
+        if self.sleep_deadline is not None and self.get_time() >= self.sleep_deadline:
+            self.player.stop()
+            self.sleep_deadline = None
+
+    def _current_chapter_index(self, current_time):
+        return next(
+            (i for i, c in enumerate(self.chapters) if c["start"] <= current_time < c["end"]),
+            len(self.chapters) - 1
+        )
+
+    def skip_chapter(self):
+        """Hoppar till nästa kapitel."""
+        if not self.chapters:
+            print("Inga kapitel tillgängliga.")
+            return
+        current_time = self.get_time() / 1000
+        current_index = self._current_chapter_index(current_time)
+        if current_index >= len(self.chapters) - 1:
+            print("Redan i sista kapitlet.")
+            return
+        target = self.chapters[current_index + 1]["start"]
+        self.player.set_time(int(target * 1000))
+        print(f"Hoppade till kapitel: {self.chapters[current_index+1].get('title', '')}")
+
+    def go_back_chapter(self):
+        """Går till föregående kapitel, eller till kapitlets start om man kommit en bit in."""
+        if not self.chapters:
+            print("Inga kapitel tillgängliga.")
+            return
+        current_time = self.get_time() / 1000
+
+        current_index = next(
+            (i for i, c in enumerate(self.chapters) if c["start"] <= current_time < c["end"]),
+            len(self.chapters) - 1
+        )
+
+        # Om man är mer än 3 sek in i kapitlet: hoppa till kapitlets egen start.
+        # Annars: hoppa till föregående kapitel.
+        if current_time - self.chapters[current_index]["start"] > 3:
+            target = self.chapters[current_index]["start"]
+        elif current_index > 0:
+            target = self.chapters[current_index - 1]["start"]
+        else:
+            target = 0
+
+        self.player.set_time(int(target * 1000))
+        print(f"Gick tillbaka till {target:.0f}s.")
 
     def stop_book(self):
         self.player.stop()

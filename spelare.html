@@ -12,7 +12,18 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center}
-.player{width:100%;max-width:440px;padding:24px;display:flex;flex-direction:column;align-items:center}
+.player{position:relative;width:100%;max-width:440px;padding:24px;display:flex;flex-direction:column;align-items:center}
+
+/* Sleep timer-knapp uppe i hörnet */
+.top-actions{position:absolute;top:18px;right:18px}
+.icon-btn-sm{background:none;border:0;padding:8px;color:var(--muted);cursor:pointer;border-radius:10px;display:grid;place-items:center}
+.icon-btn-sm:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.icon-btn-sm:active{opacity:.6}
+.icon-btn-sm svg{width:24px;height:24px;fill:currentColor;stroke:none;display:block}
+.icon-btn-sm.active{color:var(--ink)}
+.sleep-label{position:absolute;top:-2px;right:-6px;font-size:10px;font-weight:600;background:var(--ink);color:var(--bg);border-radius:8px;padding:1px 5px;line-height:1.3;display:none}
+.icon-btn-sm.active .sleep-label{display:block}
+
 .cover{width:min(64vw,260px);aspect-ratio:1;background:var(--cover);border:4px solid var(--line);border-radius:14%;display:flex;align-items:center;justify-content:center;color:#9aa1b3;font-size:14px}
 .cover img{width:100%;height:100%;object-fit:cover;display:block;border-radius:14%}
 h1{font-size:30px;font-weight:400;margin:22px 0 26px;letter-spacing:.01em;text-align:center}
@@ -24,15 +35,28 @@ h1{font-size:30px;font-weight:400;margin:22px 0 26px;letter-spacing:.01em;text-a
 .knob{position:absolute;top:4px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--knob)}
 .track:focus-visible .knob{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--ink)}
 .time{font-size:14px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
-.ctrl{width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:34px;padding:0 6px}
+
+.ctrl{width:100%;display:flex;justify-content:space-between;align-items:center;margin-top:34px;padding:0 2px}
 button{background:none;border:0;padding:10px;color:var(--ink);cursor:pointer;border-radius:12px;display:grid;place-items:center}
 button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 button:active{opacity:.6}
-svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-linejoin:round;display:block}
+svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-linejoin:round;stroke-linecap:round;display:block}
+
+/* Mindre "skip" ikoner mellan pilarna och play */
+.skip svg{width:38px;height:38px}
+.skip text{font-family:inherit;font-weight:600}
 </style>
 </head>
 <body>
 <main class="player">
+
+  <div class="top-actions">
+    <button id="sleepBtn" class="icon-btn-sm" aria-label="Sleeptimer" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><path d="M14 3a9 9 0 1 0 7 14.7A7.5 7.5 0 0 1 14 3z"/></svg>
+      <span class="sleep-label" id="sleepLabel"></span>
+    </button>
+  </div>
+
   <div class="cover" id="cover" aria-label="Omslag"></div>
   <h1 id="title">Titel</h1>
 
@@ -46,7 +70,21 @@ svg{width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:3;stroke-l
 
   <div class="ctrl">
     <button id="prev" aria-label="Föregående kapitel"><svg viewBox="0 0 60 60"><path d="M46 10 14 30 46 50z"/></svg></button>
+    <button id="skipBack" class="skip" aria-label="Spola tillbaka 15 sekunder">
+      <svg viewBox="0 0 60 60">
+        <path d="M14 14a22 22 0 1 1 -4 22"/>
+        <path d="M10 6 10 18 22 18"/>
+        <text x="30" y="37" text-anchor="middle" font-size="15" fill="currentColor" stroke="none">15</text>
+      </svg>
+    </button>
     <button id="play" aria-label="Spela"><svg id="icon" viewBox="0 0 60 60"></svg></button>
+    <button id="skipFwd" class="skip" aria-label="Spola framåt 30 sekunder">
+      <svg viewBox="0 0 60 60">
+        <path d="M46 14a22 22 0 1 0 4 22"/>
+        <path d="M50 6 50 18 38 18"/>
+        <text x="30" y="37" text-anchor="middle" font-size="15" fill="currentColor" stroke="none">30</text>
+      </svg>
+    </button>
     <button id="next" aria-label="Nästa kapitel"><svg viewBox="0 0 60 60"><path d="M14 10 46 30 14 50z"/></svg></button>
   </div>
 </main>
@@ -112,8 +150,24 @@ async function selectBook(id){
 }
 
 $("play").onclick=toggle;
-$("prev").onclick=()=>go(pos>3?ch:ch-1);
-$("next").onclick=()=>go(ch+1);
+
+function setChapterIndex(i){
+  ch = Math.max(0, Math.min(chapters.length-1, i));
+  render();
+}
+
+async function nextChapter(){
+  setChapterIndex(ch+1);
+  await fetch("/api/next-chapter", {method:"POST"});
+  await syncProgress();
+}
+async function prevChapter(){
+  go(pos>3?ch:ch-1);
+  await fetch("/api/prev-chapter", {method:"POST"});
+  await syncProgress();
+}
+$("prev").onclick=prevChapter;
+$("next").onclick=nextChapter;
 
 const track=$("track");
 function seek(e){const r=track.getBoundingClientRect();
@@ -148,6 +202,52 @@ async function loadCurrentBook(){
 }
 
 loadCurrentBook();
+
+/* ===== Nytt: skip-knappar och sleeptimer ===== */
+/* Rör inget ovanför denna rad. */
+
+async function skipBy(ms){
+  try{
+    await fetch("/api/seek",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ms})
+    });
+  }catch(err){
+    console.error("Kunde inte spola:", err);
+  }
+  syncProgress();
+}
+$("skipBack").onclick=()=>skipBy(-15000);
+$("skipFwd").onclick=()=>skipBy(30000);
+
+let sleepTimerActive=false;
+$("sleepBtn").onclick=async()=>{
+  if(sleepTimerActive){
+    // Avbryt pågående sleeptimer
+    await fetch("/api/sleep-timer/cancel",{method:"POST"}).catch(()=>{});
+    sleepTimerActive=false;
+    $("sleepBtn").classList.remove("active");
+    $("sleepBtn").setAttribute("aria-pressed","false");
+    $("sleepLabel").textContent="";
+    return;
+  }
+  const min = prompt("Stäng av uppspelningen om hur många minuter?","30");
+  if(!min || isNaN(Number(min))) return;
+  try{
+    await fetch("/api/sleep-timer",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({minutes:Number(min)})
+    });
+    sleepTimerActive=true;
+    $("sleepBtn").classList.add("active");
+    $("sleepBtn").setAttribute("aria-pressed","true");
+    $("sleepLabel").textContent=min;
+  }catch(err){
+    console.error("Kunde inte starta sleeptimer:", err);
+  }
+};
 </script>
 </body>
 </html>
